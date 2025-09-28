@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan FMS Mobile</title>
+    <!-- Memuat Tailwind CSS CDN untuk styling yang responsif dan modern -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #eef2f6; 
+        }
+        /* Style untuk status unit */
+        .status-standby-auto { background-color: #d1fae5; color: #065f46; }
+        .status-standby-on { background-color: #fef3c7; color: #b45309; }
+        .status-standby-off { background-color: #fee2e2; color: #991b1b; }
+        .status-on { background-color: #bfdbfe; color: #1e40af; }
+        .status-off { background-color: #f3f4f6; color: #4b5563; }
+        .card-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+
+        /* Responsif untuk 3 kolom di formulir */
+        @media (max-width: 640px) {
+            .input-grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <!-- Kontainer Pesan Modal (untuk konfirmasi delete) -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 hidden transition-opacity duration-300"></div>
+    <div id="confirmation-modal" class="fixed inset-0 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl p-6 shadow-2xl max-w-sm w-full transform transition-all duration-300 scale-95">
+            <!-- HEADER MODAL DENGAN PESAN BARU -->
+            <h3 id="modal-title" class="text-xl font-bold text-red-600 mb-3 text-center">YAKIN MAU DI HAPUS BEY ???</h3>
+            <!-- PESAN UNTUK PANDUAN KONFIRMASI -->
+            <p id="modal-message" class="text-sm text-gray-600 mb-6">Ketik 'YA' (huruf kapital) untuk konfirmasi penghapusan.</p>
+            <input type="text" id="modal-input" placeholder="Ketik YA" class="w-full p-2 border border-gray-300 rounded-lg mb-4">
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150">Batal</button>
+                <button id="modal-confirm" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150" disabled>Hapus</button>
+            </div>
+        </div>
+    </div>
+    <!-- Akhir Kontainer Modal -->
+
+    <!-- Header Aplikasi (Diperbarui) -->
+    <header class="text-center mb-6">
+        <h1 class="text-4xl font-extrabold text-red-700 tracking-wider">LAPORAN PM FMS</h1>
+        <p class="text-xs text-gray-600 text-right mt-1">Created by : mamang_admin</p>
+    </header>
+
+    <!-- CONTAINER UTAMA -->
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <!-- Formulir Input Laporan Baru -->
+        <section class="bg-white p-6 rounded-xl card-shadow">
+            <h2 class="text-center text-2xl font-bold text-red-600 mb-6">KOMANDO !!!</h2>
+            <form id="laporan-form" class="space-y-4">
+
+                <!-- Tanggal, No. Urut, Nama Unit (1 Baris Grid) -->
+                <div class="grid grid-cols-3 gap-3 input-grid-3">
+                    <div>
+                        <label for="tanggal" class="block text-sm font-medium text-gray-700">Tanggal</label>
+                        <input type="date" id="tanggal" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <div>
+                        <label for="no_urut" class="block text-sm font-medium text-gray-700">No. Urut</label>
+                        <input type="text" id="no_urut" placeholder="Contoh: A001" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <div>
+                        <label for="nama_unit" class="block text-sm font-medium text-gray-700">Nama Unit</label>
+                        <select id="nama_unit" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border bg-white">
+                            <option value="">-- Pilih Unit --</option>
+                            <option value="TRA">TRA</option>
+                            <option value="OS">OS</option>
+                            <option value="ASGO">ASGO</option>
+                            <option value="DM">DM</option>
+                            <option value="DS">DS</option>
+                            <option value="TV">TV</option>
+                            <option value="MILLENIAL">MILLENIAL</option>
+                            <option value="CMD">CMD</option>
+                            <option value="GCO">GCO</option>
+                            <option value="MPR">MPR</option>
+                            <option value="GRV">GRV</option>
+                            <option value="FW">FW</option>
+                            <option value="JASMINE">JASMINE</option>
+                            <option value="OTHER">Lainnya (Ketik Manual)</option>
+                        </select>
+                    </div>
+                    <div id="other_unit_input" class="col-span-3 hidden">
+                        <label for="other_unit" class="block text-sm font-medium text-gray-700 mt-2">Nama Unit Lainnya</label>
+                        <input type="text" id="other_unit" placeholder="Ketik manual nama unit..." class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                </div>
+
+                <!-- Status Unit (Diperbarui: Menggunakan text-xs dan p-1.5) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Status Unit</label>
+                    <div class="flex flex-wrap gap-2">
+                        <!-- Perubahan di bawah: text-xs, p-1.5 -->
+                        <label class="inline-flex items-center p-1.5 rounded-lg cursor-pointer status-on">
+                            <input type="radio" name="status" value="ON" required class="form-radio h-4 w-4 text-blue-600">
+                            <span class="ml-2 text-xs font-semibold">ON</span>
+                        </label>
+                        <label class="inline-flex items-center p-1.5 rounded-lg cursor-pointer status-off">
+                            <input type="radio" name="status" value="OFF" required class="form-radio h-4 w-4 text-gray-600">
+                            <span class="ml-2 text-xs font-semibold">OFF</span>
+                        </label>
+                        <label class="inline-flex items-center p-1.5 rounded-lg cursor-pointer status-standby-auto">
+                            <input type="radio" name="status" value="STANDBY_AUTO" required class="form-radio h-4 w-4 text-green-600">
+                            <span class="ml-2 text-xs">&nbsp;STANDBY (AUTO)</span>
+                        </label>
+                        <label class="inline-flex items-center p-1.5 rounded-lg cursor-pointer status-standby-on">
+                            <input type="radio" name="status" value="STANDBY_ON" required class="form-radio h-4 w-4 text-yellow-600">
+                            <span class="ml-2 text-xs">&nbsp;STANDBY (ON)</span>
+                        </label>
+                        <label class="inline-flex items-center p-1.5 rounded-lg cursor-pointer status-standby-off">
+                            <input type="radio" name="status" value="STANDBY_OFF" required class="form-radio h-4 w-4 text-red-600">
+                            <span class="ml-2 text-xs">&nbsp;STANDBY (OFF)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Kolom Input Foto (Sequential Add & Individual Delete) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2 font-bold">Input Foto Unit (Minimal 1 Foto)</label>
+                    
+                    <!-- Input File Tersembunyi -->
+                    <!-- Menggunakan id "hidden_photo_input" untuk dipicu oleh tombol di bawah -->
+                    <input type="file" id="hidden_photo_input" accept="image/*" multiple class="hidden">
+                    
+                    <!-- Tombol Pemicu Input File -->
+                    <button type="button" id="add-photo-button" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-4 3 3 5-5v6z" clip-rule="evenodd" />
+                        </svg>
+                        Tambahkan Foto (Kamera / Galeri)
+                    </button>
+                    
+                    <p class="text-xs text-gray-500 mt-2">Otomatis kompresi gambar saat ditambahkan.</p>
+                    
+                    <!-- Preview Thumbnail Foto akan muncul di sini -->
+                    <div id="photo-preview" class="mt-3 flex flex-wrap gap-3 p-2 border border-dashed border-gray-300 rounded-lg min-h-[50px]">
+                        <p id="photo-message" class="text-xs text-gray-400 m-auto">Belum ada foto yang ditambahkan.</p>
+                    </div>
+
+                    <!-- Hidden field untuk validasi jumlah foto, hanya untuk mencegah submit jika 0 foto -->
+                    <input type="hidden" id="photo_count_validator" required data-min-count="1">
+                </div>
+                <!-- Akhir Kolom Input Foto -->
+
+                <!-- Aksesoris Checkboxes -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Aksesoris (Boleh pilih > 1)</label>
+                    <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="PM" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">PM</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="KWH" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">KWH</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="COS P" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">COS P</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="FAN" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">FAN</span>
+                        </label>
+                         <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="Pb" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">Pb</span>
+                        </label>
+                         <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="SL" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">SL</span>
+                        </label>
+                         <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="HZ" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">HZ</span>
+                        </label>
+                         <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="Ampere" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">Ampere</span>
+                        </label>
+                         <label class="inline-flex items-center">
+                            <input type="checkbox" name="aksesoris" value="Voltage" class="form-checkbox h-4 w-4 text-blue-600 rounded">
+                            <span class="ml-2">Voltage</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Data Pengukuran -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Suhu (type="text" memungkinkan input angka dan huruf/teks) -->
+                    <div>
+                        <label for="suhu" class="block text-sm font-medium text-gray-700">Suhu</label>
+                        <input type="text" id="suhu" placeholder="Cth: 30°C atau Normal" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <!-- Pressure -->
+                    <div>
+                        <label for="tekanan" class="block text-sm font-medium text-gray-700">Pressure</label>
+                        <input type="text" id="tekanan" placeholder="Cth: 5.5 Bar" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <!-- Voltage -->
+                    <div>
+                        <label for="tegangan" class="block text-sm font-medium text-gray-700">Voltage (V / VDC)</label>
+                        <input type="text" id="tegangan" placeholder="Cth: 220V" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <!-- Kapasitas Breaker -->
+                    <div>
+                        <label for="kapasitas_breaker" class="block text-sm font-medium text-gray-700">Kapasitas Breaker</label>
+                        <input type="text" id="kapasitas_breaker" placeholder="Cth: 100 A" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                    <!-- Ampere -->
+                    <div class="col-span-2">
+                        <label for="ampere" class="block text-sm font-medium text-gray-700">Ampere ( R/S/T)</label>
+                        <input type="text" id="ampere" placeholder="Cth: 2.1/2.2/2.3 A" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                </div>
+
+                <!-- Note / Temuan (Opsional) -->
+                <div>
+                    <label for="note_temuan" class="block text-sm font-medium text-gray-700">Note / Temuan (Opsional)</label>
+                    <textarea id="note_temuan" rows="3" placeholder="Tuliskan temuan atau catatan penting di sini..." class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border"></textarea>
+                </div>
+
+                <!-- PIC -->
+                <div>
+                    <label for="pic_name" class="block text-sm font-medium text-gray-700">PIC</label>
+                    <select id="pic_name" required class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border bg-white">
+                        <option value="">-- Pilih PIC --</option>
+                        <option value="Rio">Rio</option>
+                        <option value="Restu">Restu</option>
+                        <option value="Ari">Ari</option>
+                        <option value="Nabil">Nabil</option>
+                        <option value="Aldi">Aldi</option>
+                        <option value="Iqbal">Iqbal</option>
+                        <option value="Agus">Agus</option>
+                        <option value="OTHER">Lainnya (Ketik Manual)</option>
+                    </select>
+                    <div id="other_pic_input" class="hidden mt-2">
+                        <label for="other_pic" class="block text-sm font-medium text-gray-700">Nama PIC Lainnya</label>
+                        <input type="text" id="other_pic" placeholder="Ketik manual nama PIC..." class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+                    </div>
+                </div>
+
+                <!-- Tombol Submit Laporan -->
+                <button type="submit" id="submit-button" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg">
+                    Simpan Laporan & Download Foto
+                </button>
+            </form>
+        </section>
+
+        <!-- Daftar Riwayat Laporan -->
+        <section class="bg-white p-6 rounded-xl card-shadow">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Riwayat Laporan FMS</h2>
+            
+            <!-- Pencarian & Filter -->
+            <div class="mb-4">
+                <input type="text" id="search-input" placeholder="Cari berdasarkan No. Urut, Unit, atau PIC..." class="w-full rounded-lg border-gray-300 shadow-sm p-2 border">
+            </div>
+
+            <!-- Tombol Hapus Massal -->
+            <div class="flex justify-between space-x-2 mb-4 delete-btn-group text-sm">
+                <button id="delete-all-button" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 flex-1 px-4 py-2 rounded-lg">
+                    Hapus Semua Data
+                </button>
+                <button id="delete-filtered-button" type="button" class="bg-red-100 hover:bg-red-200 text-red-700 flex-1 px-4 py-2 rounded-lg">
+                    Hapus <span id="filtered-count">0</span> Data Terfilter
+                </button>
+            </div>
+
+            <!-- Daftar Laporan (Rendered by JS) -->
+            <div id="reports-list" class="space-y-4">
+                <p id="no-data-message" class="text-center text-gray-500 italic">Tidak ada laporan tersimpan.</p>
+            </div>
+
+            <!-- Tombol Export WhatsApp -->
+            <div class="mt-6 pt-4 border-t border-gray-200">
+                <button id="export-button" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12.031 0C5.405 0 .031 5.374 .031 12c0 2.227.592 4.332 1.716 6.162L0 23.971l6.095-1.611c1.782.977 3.791 1.503 5.936 1.503h.001c6.626 0 12-5.374 12-12s-5.374-12-12-12zm0 1.5c5.803 0 10.5 4.697 10.5 10.5s-4.697 10.5-10.5 10.5c-1.785 0-3.525-.443-5.068-1.294l-5.69 1.506 1.503-5.679c-.848-1.543-1.291-3.284-1.291-5.071 0-5.803 4.697-10.5 10.5-10.5zm-5.022 6.452c-.17-.003-.356-.006-.525.003-.385.021-.758.093-1.115.228-.707.272-1.284.821-1.751 1.488-.231.332-.387.727-.457 1.139-.071.412-.086.837-.03 1.258.056.421.17.828.324 1.205.155.377.373.731.644 1.056.551.644 1.189 1.168 1.954 1.595.765.427 1.637.755 2.585.832.948.077 1.84-.047 2.664-.325.824-.277 1.554-.741 2.215-1.397.33-.33.585-.694.767-1.1.182-.405.28-.845.295-1.295.016-.45-.034-.897-.15-1.331-.116-.434-.316-.837-.589-1.205-.274-.367-.611-.703-.984-1.002-.746-.6-1.536-1.077-2.427-1.427-.89-.35-1.854-.575-2.85-.688zm.974 1.054c.159.006.312.016.459.034.33.04.654.12.964.241.611.238 1.136.697 1.57 1.282.203.277.348.599.43.931.082.332.124.673.127 1.018.002.344-.04.688-.122 1.02-.082.332-.23.65-.43.931-.482.684-1.049 1.22-1.708 1.649-.659.429-1.401.755-2.228.877-.827.121-1.638.078-2.39-.129-.753-.207-1.458-.582-2.072-1.125-.306-.271-.555-.579-.747-.92-.191-.34-.326-.708-.399-1.096-.073-.388-.088-.787-.042-1.187.046-.4.152-.788.314-1.155.162-.367.382-.705.656-.998.275-.294.613-.564.986-.796.746-.476 1.55-.838 2.417-1.085.867-.247 1.815-.37 2.784-.314z"/>
+                    </svg>
+                    Kirim ke Mamang Admin
+                </button>
+            </div>
+
+        </section>
+
+    </div>
+
+    <!-- Toast Notification Area (DIUBAH POSISI KE ATAS TENGAH) -->
+    <div id="toast-container" class="fixed top-1/4 left-1/2 -translate-x-1/2 p-4 pointer-events-none z-[9999] w-full max-w-sm">
+        <!-- Toast akan muncul di sini -->
+    </div>
+
+    <script>
+        // ===============================================
+        // KONFIGURASI APLIKASI
+        // ===============================================
+        const WHATSAPP_NUMBER = '6287829023344'; // Format Internasional tanpa "+"
+        const STORAGE_KEY = 'fms_preventive_reports';
+        const MAX_FILE_SIZE_KB = 500; // Target ukuran file Base64
+        
+        // Data sementara untuk foto yang sedang diupload (Base64 string)
+        let currentPhotos = [];
+
+        // ===============================================
+        // FUNGSI UTILITY & VALIDATION (BARU)
+        // ===============================================
+
+        function showToast(message, isError = false) {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+            const toast = document.createElement('div');
+            
+            // Menggunakan font besar untuk pesan error (KOCAK LU)
+            toast.className = `bg-opacity-90 px-4 py-3 rounded-xl shadow-lg font-bold mb-2 pointer-events-auto transition transform duration-300 ${isError ? 'bg-red-600 text-white text-xl text-center' : 'bg-green-500 text-white text-sm'}`;
+            
+            toast.textContent = message;
+
+            // Pastikan hanya ada satu toast yang terlihat
+            Array.from(toastContainer.children).forEach(child => child.remove());
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                // Gunakan translate-y-0 ke translate-y-full untuk animasi
+                toast.classList.add('translate-y-full', 'opacity-0');
+                toast.addEventListener('transitionend', () => toast.remove());
+            }, 3000);
+        }
+
+        /**
+         * Mengganti pesan validasi bawaan browser ("harap isi bidang ini") 
+         * dengan pesan kustom "KOCAK LU" menggunakan setCustomValidity().
+         */
+        function initializeCustomValidationMessages() {
+            const requiredElements = document.querySelectorAll('[required]');
+
+            requiredElements.forEach(element => {
+                // Set pesan kustom saat validasi gagal (event 'invalid' terpicu saat submit)
+                element.addEventListener('invalid', function(e) {
+                    e.target.setCustomValidity(""); // Reset dulu untuk memastikan pesan baru bisa di-set
+                    if (!e.target.validity.valid) {
+                         // Hanya tampilkan pesan kustom jika bidang tidak valid
+                        e.target.setCustomValidity("KOCAK LU");
+                    }
+                });
+
+                // Reset pesan kustom saat user mulai mengisi (event 'input' atau 'change')
+                element.addEventListener('input', function(e) {
+                    e.target.setCustomValidity("");
+                });
+                
+                element.addEventListener('change', function(e) {
+                    e.target.setCustomValidity("");
+                });
+            });
+        }
+
+
+        // ===============================================
+        // FUNGSI STORAGE (LOCAL STORAGE)
+        // ===============================================
+
+        function getReports() {
+            try {
+                const reports = localStorage.getItem(STORAGE_KEY);
+                return reports ? JSON.parse(reports) : [];
+            } catch (e) {
+                console.error("Error reading Local Storage:", e);
+                return [];
+            }
+        }
+
+        function saveReports(reports) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+            } catch (e) {
+                console.error("Error writing to Local Storage:", e);
+                showToast("Peringatan: Local Storage penuh! Data baru mungkin tidak tersimpan.", true);
+            }
+        }
+        
+        // ===============================================
+        // FUNGSI IMAGE PROCESSING (COMPRESSION)
+        // ===============================================
+        
+        /**
+         * Mengompresi gambar menggunakan Canvas API dan mengembalikan Base64 string.
+         */
+        function compressAndProcessImage(file) {
+            return new Promise((resolve, reject) => {
+                // Hanya proses file yang merupakan gambar
+                if (!file.type.startsWith('image/')) {
+                    reject(new Error('File yang dipilih bukan gambar.'));
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                reader.onload = function (event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        // Batasi resolusi jika terlalu besar
+                        const MAX_WIDTH = 1200;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > MAX_WIDTH) {
+                            height = height * (MAX_WIDTH / width);
+                            width = MAX_WIDTH;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Kompresi ke JPEG. Kualitas 0.5 (50%) dipertahankan untuk target < 500KB
+                        let quality = 0.5;
+                        let compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                        
+                        // Fallback untuk memastikan gambar tidak terlalu besar (walaupun kualitas 0.5 sudah cukup)
+                        while (compressedBase64.length > (MAX_FILE_SIZE_KB * 1024 * 4 / 3) && quality > 0.1) {
+                            quality -= 0.1;
+                            compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                        }
+                        
+                        resolve(compressedBase64);
+                    };
+
+                    img.onerror = function() {
+                        reject(new Error("Gagal memuat gambar untuk kompresi."));
+                    }
+                };
+                
+                reader.onerror = function (error) {
+                    reject(new Error("Gagal membaca file: " + error.target.error));
+                };
+            });
+        }
+        
+        // ===============================================
+        // FUNGSI DOWNLOAD FOTO
+        // ===============================================
+        
+        /**
+         * Memicu download Base64 string sebagai file gambar
+         */
+        function downloadBase64Image(base64Data, filename) {
+            const link = document.createElement('a');
+            link.href = base64Data;
+            link.download = filename; // Ini yang menentukan nama file di folder Downloads
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /**
+         * Otomatis mengunduh semua foto Base64 setelah laporan disimpan.
+         */
+        function triggerAutomaticDownload(photoData, prefix) {
+            if (!photoData || photoData.length === 0) return;
+            
+            // Memberikan sedikit waktu tunggu sebelum download pertama
+            setTimeout(() => {
+                photoData.forEach((base64, index) => {
+                    // Format: [no.urut]_[nama unit]_[nomor_foto].jpg
+                    const photoNumber = index + 1;
+                    const filename = `${prefix}_${photoNumber}.jpg`; 
+                    downloadBase64Image(base64, filename);
+                });
+                
+                showToast(`${photoData.length} foto berhasil diunduh ke folder 'Downloads'.`);
+            }, 500); // 500ms delay untuk memastikan form submission selesai
+        }
+        
+        // ===============================================
+        // FUNGSI INPUT DAN MANAJEMEN FOTO
+        // ===============================================
+        
+        const photoInput = document.getElementById('hidden_photo_input');
+        const addButton = document.getElementById('add-photo-button');
+        const previewContainer = document.getElementById('photo-preview');
+        const photoMessage = document.getElementById('photo-message');
+        const photoCountValidator = document.getElementById('photo_count_validator');
+
+        // Memicu klik pada input file tersembunyi
+        if (addButton) {
+             addButton.addEventListener('click', () => {
+                if (photoInput) photoInput.click();
+            });
+        }
+       
+        // Menangani pemilihan file baru
+        if (photoInput) {
+            photoInput.addEventListener('change', async function(e) {
+                const files = e.target.files;
+                if (files.length === 0) return;
+
+                showToast(`Memproses ${files.length} foto. Mohon tunggu...`);
+                addButton.disabled = true;
+
+                let successCount = 0;
+                
+                for (let i = 0; i < files.length; i++) {
+                    try {
+                        const base64 = await compressAndProcessImage(files[i]);
+                        currentPhotos.push(base64); // APPREND (menambahkan) ke array
+                        successCount++;
+                    } catch (error) {
+                        console.error("Gagal memproses foto:", error);
+                        // Melewati file yang gagal
+                    }
+                }
+                
+                // Reset input agar event 'change' terpicu lagi jika file yang sama dipilih
+                e.target.value = ''; 
+                
+                renderPhotoPreview();
+                addButton.disabled = false;
+                if (successCount > 0) {
+                     showToast(`${successCount} foto berhasil ditambahkan!`);
+                }
+            });
+        }
+        
+        /**
+         * Menghapus foto berdasarkan indeks
+         */
+        function deletePhoto(index) {
+            currentPhotos.splice(index, 1);
+            renderPhotoPreview();
+            showToast("Foto berhasil dihapus dari daftar.");
+        }
+
+        /**
+         * Merender ulang tampilan semua foto di preview container
+         */
+        function renderPhotoPreview() {
+            if (previewContainer) previewContainer.innerHTML = '';
+            
+            if (currentPhotos.length === 0) {
+                if (photoMessage) previewContainer.appendChild(photoMessage);
+                // Gagal validasi form jika tidak ada foto
+                if (photoCountValidator) photoCountValidator.value = '';
+                
+                // Atur pesan validasi kustom untuk field foto
+                if (photoCountValidator) photoCountValidator.setCustomValidity("KOCAK LU");
+
+                return;
+            }
+            
+            // Lulus validasi form jika ada foto
+            if (photoCountValidator) {
+                photoCountValidator.value = 'OK';
+                photoCountValidator.setCustomValidity("");
+            }
+
+
+            currentPhotos.forEach((base64, index) => {
+                const itemWrapper = document.createElement('div');
+                itemWrapper.className = 'relative h-20 w-20 flex-shrink-0';
+                
+                // Gambar Thumbnail
+                const imgElement = document.createElement('img');
+                imgElement.src = base64;
+                imgElement.className = 'h-full w-full object-cover rounded-lg border-2 border-red-500 shadow-md transition duration-200 hover:opacity-80';
+                
+                // Tombol Hapus
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'absolute -top-2 -right-2 bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold shadow-lg hover:bg-red-700 transition duration-150';
+                deleteButton.innerHTML = '&#10005;'; // X mark
+                deleteButton.onclick = () => deletePhoto(index);
+
+                itemWrapper.appendChild(imgElement);
+                itemWrapper.appendChild(deleteButton);
+                
+                if (previewContainer) previewContainer.appendChild(itemWrapper);
+            });
+        }
+
+
+        // ===============================================
+        // FUNGSI FORM DAN SUBMIT
+        // ===============================================
+        
+        // Logic untuk input unit dan PIC 'OTHER'
+        document.getElementById('nama_unit').addEventListener('change', function() {
+            const otherInput = document.getElementById('other_unit_input');
+            const otherUnitField = document.getElementById('other_unit');
+            if (this.value === 'OTHER') {
+                if (otherInput) otherInput.classList.remove('hidden');
+                if (otherUnitField) otherUnitField.setAttribute('required', 'required');
+            } else {
+                if (otherInput) otherInput.classList.add('hidden');
+                if (otherUnitField) otherUnitField.removeAttribute('required');
+                if (otherUnitField) otherUnitField.value = '';
+            }
+        });
+
+        document.getElementById('pic_name').addEventListener('change', function() {
+            const otherInput = document.getElementById('other_pic_input');
+            const otherPicField = document.getElementById('other_pic');
+            if (this.value === 'OTHER') {
+                if (otherInput) otherInput.classList.remove('hidden');
+                if (otherPicField) otherPicField.setAttribute('required', 'required');
+            } else {
+                if (otherInput) otherInput.classList.add('hidden');
+                if (otherPicField) otherPicField.removeAttribute('required');
+                if (otherPicField) otherPicField.value = '';
+            }
+        });
+
+        document.getElementById('laporan-form').addEventListener('submit', async function(e) {
+            // Cek validitas form standar. Jika gagal, browser akan menampilkan pesan "KOCAK LU"
+            if (!this.checkValidity()) {
+                 // Karena browser sudah menampilkan pesan KOCAK LU native, 
+                 // kita tambahkan toast kustom yang lebih besar di sini sebagai baris kedua
+                 showToast("KOCAK LU", true);
+                 // biarkan proses default prevent.
+                 return;
+            }
+
+            e.preventDefault();
+
+            // Pengecekan validitas form HTML sudah dilakukan di atas (this.checkValidity())
+            // Jika ada field required yang kosong, akan ada native alert "KOCAK LU" + custom toast "KOCAK LU"
+            
+            const submitButton = document.getElementById('submit-button');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Menyimpan & Mengunduh Foto...';
+            }
+
+            try {
+                const form = e.target;
+                const picName = form.pic_name.value === 'OTHER' ? form.other_pic.value : form.pic_name.value;
+                const unitName = form.nama_unit.value === 'OTHER' ? form.other_unit.value : form.nama_unit.value;
+                
+                const reportId = Date.now();
+                const noUrut = form.no_urut.value.toUpperCase().replace(/[^a-zA-Z0-9]/g, ''); 
+                const cleanUnitName = unitName.toUpperCase().replace(/[^a-zA-Z0-9]/g, ''); 
+                
+                const aksesoris = Array.from(form.querySelectorAll('input[name="aksesoris"]:checked')).map(cb => cb.value);
+
+                const newReport = {
+                    id: reportId,
+                    tanggal: form.tanggal.value,
+                    no_urut: noUrut,
+                    nama_unit: unitName,
+                    status: form.status.value,
+                    aksesoris: aksesoris,
+                    suhu: form.suhu.value,
+                    tekanan: form.tekanan.value,
+                    tegangan: form.tegangan.value,
+                    kapasitas_breaker: form.kapasitas_breaker.value,
+                    ampere: form.ampere.value,
+                    note_temuan: form.note_temuan.value,
+                    pic: picName,
+                    // SIMPAN DATA FOTO BASE64 DI SINI
+                    foto_data: [...currentPhotos], // Salin data foto
+                    // Field untuk penamaan file download: no.urut_nama unit
+                    foto_filename_prefix: `${noUrut}_${cleanUnitName}`,
+                    created_at: new Date().toISOString()
+                };
+
+                // Simpan Laporan ke Local Storage
+                const reports = getReports();
+                reports.push(newReport);
+                saveReports(reports);
+                
+                showToast(`Laporan ${noUrut} (${unitName}) berhasil disimpan!`);
+
+                // Memicu download otomatis setelah laporan disimpan
+                if (newReport.foto_data && newReport.foto_data.length > 0) {
+                    triggerAutomaticDownload(newReport.foto_data, newReport.foto_filename_prefix); 
+                }
+
+                // Reset dan Update
+                form.reset();
+                currentPhotos = []; // Kosongkan array foto untuk laporan berikutnya
+                renderPhotoPreview(); // Render ulang preview (menampilkan pesan 'belum ada foto')
+                const tanggalInput = document.getElementById('tanggal');
+                if (tanggalInput) tanggalInput.valueAsDate = new Date();
+                
+                filterReports(); 
+
+            } catch (error) {
+                console.error("Gagal menyimpan laporan:", error);
+                showToast("Gagal menyimpan laporan. Cek konsol untuk detail error.", true);
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Simpan Laporan & Download Foto';
+                }
+            }
+        });
+
+        // ===============================================
+        // FUNGSI DISPLAY DAN FILTER
+        // ===============================================
+
+        function renderReports(reports) {
+            const reportsList = document.getElementById('reports-list');
+            const noDataMessage = document.getElementById('no-data-message');
+            const filteredCount = document.getElementById('filtered-count');
+
+            if (reportsList) reportsList.innerHTML = '';
+
+            if (reports.length === 0) {
+                if (noDataMessage) noDataMessage.classList.remove('hidden');
+                if (filteredCount) filteredCount.textContent = '0';
+                return;
+            }
+            
+            if (noDataMessage) noDataMessage.classList.add('hidden');
+            if (filteredCount) filteredCount.textContent = reports.length;
+
+
+            reports.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); // Urutkan terbaru di atas
+
+            reports.forEach(report => {
+                const formattedDate = new Date(report.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+                const aksesorisText = report.aksesoris && report.aksesoris.length > 0 ? report.aksesoris.join(', ') : 'N/A';
+                const photoCount = report.foto_data ? report.foto_data.length : 0;
+                
+                const reportCard = document.createElement('div');
+                reportCard.id = `report-${report.id}`;
+                reportCard.className = 'bg-gray-50 p-4 rounded-lg border-l-4 border-red-500 shadow-sm';
+                reportCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-semibold text-gray-800">${report.no_urut} - ${report.nama_unit}</span>
+                            <span class="text-xs text-gray-500">${formattedDate} | PIC: ${report.pic}</span>
+                        </div>
+                        <button data-id="${report.id}" class="delete-single-btn text-red-500 hover:text-red-700 transition duration-150 text-xs font-bold">Hapus</button>
+                    </div>
+                    
+                    <div class="space-y-1 text-sm">
+                        <p class="flex justify-between">
+                            <span class="text-gray-600">Status:</span>
+                            <span class="font-semibold text-xs py-0.5 px-2 rounded-full status-${report.status.toLowerCase().replace('_', '-')}">${report.status.replace('_', ' ')}</span>
+                        </p>
+                        <p><span class="text-gray-600">Aksesoris:</span> <span class="font-medium">${aksesorisText}</span></p>
+                        <p class="text-xs text-gray-600">Suhu: <span class="font-semibold text-gray-800">${report.suhu}</span> | Pressure: ${report.tekanan} | Breaker: ${report.kapasitas_breaker}</p>
+                        <p class="text-xs text-gray-600">Ampere: ${report.ampere} | Voltage: ${report.tegangan}</p>
+                        <p class="text-xs text-gray-600">Temuan: <span class="font-semibold text-red-600">${report.note_temuan || 'Nihil'}</span></p>
+                    </div>
+                    <!-- Tombol Download Ulang Foto telah dihapus dari sini -->
+                    ${photoCount > 0 ? `
+                        <div class="mt-3 pt-3 border-t border-gray-200">
+                            <span class="text-xs font-medium text-gray-600">${photoCount} Foto Tersimpan (Diunduh saat penyimpanan).</span>
+                        </div>
+                    ` : ''}
+                `;
+                if (reportsList) reportsList.appendChild(reportCard);
+            });
+
+            document.querySelectorAll('.delete-single-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    showDeleteModal('single', this.getAttribute('data-id'));
+                });
+            });
+        }
+
+        function filterReports() {
+            const searchInput = document.getElementById('search-input');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const allReports = getReports();
+
+            const filtered = allReports.filter(report => 
+                report.no_urut.toLowerCase().includes(searchTerm) ||
+                report.nama_unit.toLowerCase().includes(searchTerm) ||
+                report.pic.toLowerCase().includes(searchTerm) ||
+                (report.note_temuan && report.note_temuan.toLowerCase().includes(searchTerm))
+            );
+            
+            renderReports(filtered);
+        }
+
+        // ===============================================
+        // FUNGSI MODAL (PENGGANTI confirm()/alert())
+        // ===============================================
+        
+        function showDeleteModal(actionType, id = null) {
+            const modal = document.getElementById('confirmation-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            const modalInput = document.getElementById('modal-input');
+            const modalConfirm = document.getElementById('modal-confirm');
+            const modalCancel = document.getElementById('modal-cancel');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message'); // Ambil elemen pesan
+
+            if (!modal || !backdrop || !modalInput || !modalConfirm || !modalCancel || !modalTitle || !modalMessage) return;
+
+            modal.classList.remove('hidden');
+            backdrop.classList.remove('hidden');
+            modalInput.value = '';
+            modalConfirm.disabled = true;
+
+            // Judul modal menggunakan pesan yang diminta user
+            modalTitle.textContent = "YAKIN MAU DI HAPUS BEY ???";
+            
+            // Mengatur pesan konfirmasi
+            if (actionType === 'filtered') {
+                modalMessage.textContent = `Anda akan menghapus ${document.getElementById('filtered-count').textContent} data terfilter. Ketik 'YA' (huruf kapital) untuk konfirmasi.`;
+            } else if (actionType === 'all') {
+                modalMessage.textContent = "Anda akan menghapus SEMUA data. Ketik 'YA' (huruf kapital) untuk konfirmasi.";
+            } else {
+                 modalMessage.textContent = "Ketik 'YA' (huruf kapital) untuk konfirmasi penghapusan.";
+            }
+
+
+            const inputHandler = () => {
+                modalConfirm.disabled = modalInput.value !== 'YA'; 
+            };
+
+            modalInput.oninput = null; 
+            modalConfirm.onclick = null;
+            modalCancel.onclick = null;
+
+            modalInput.oninput = inputHandler;
+
+            const confirmHandler = () => {
+                if (modalInput.value === 'YA') {
+                    if (actionType === 'all') deleteAllReports(true);
+                    else if (actionType === 'filtered') deleteFilteredReports(true);
+                    else deleteSingleReport(id, true);
+                }
+                hideDeleteModal();
+            };
+
+            const cancelHandler = () => {
+                hideDeleteModal();
+            };
+
+            modalConfirm.onclick = confirmHandler;
+            modalCancel.onclick = cancelHandler;
+        }
+
+        function hideDeleteModal() {
+            const modal = document.getElementById('confirmation-modal');
+            const backdrop = document.getElementById('modal-backdrop');
+            if (modal) modal.classList.add('hidden');
+            if (backdrop) backdrop.classList.add('hidden');
+        }
+
+        // ===============================================
+        // FUNGSI HAPUS DATA
+        // ===============================================
+
+        function deleteSingleReport(id, confirmed = false) {
+            if (!confirmed) { showDeleteModal('single', id); return; }
+            
+            let reports = getReports();
+            reports = reports.filter(report => report.id !== parseInt(id));
+            saveReports(reports);
+            filterReports();
+            showToast("Laporan berhasil dihapus!");
+        }
+
+        function deleteAllReports(confirmed = false) {
+            if (!confirmed) { showDeleteModal('all'); return; }
+
+            saveReports([]);
+            filterReports();
+            showToast("Semua data laporan berhasil dihapus!");
+        }
+
+        function deleteFilteredReports(confirmed = false) {
+            if (!confirmed) { showDeleteModal('filtered'); return; }
+
+            const reportsList = document.getElementById('reports-list');
+            if (!reportsList) {
+                 showToast("Tidak ada data yang cocok dengan pencarian untuk dihapus.", true);
+                return;
+            }
+
+            const reportsToDelete = Array.from(reportsList.children)
+                .map(card => {
+                    const idMatch = card.id.match(/report-(\d+)/);
+                    return idMatch ? parseInt(idMatch[1]) : null;
+                })
+                .filter(id => id !== null);
+            
+            if (reportsToDelete.length === 0) {
+                showToast("Tidak ada data yang cocok dengan pencarian untuk dihapus.", true);
+                return;
+            }
+
+            let allReports = getReports();
+            allReports = allReports.filter(report => !reportsToDelete.includes(report.id));
+            saveReports(allReports);
+            filterReports();
+            showToast(`${reportsToDelete.length} laporan terfilter berhasil dihapus!`);
+        }
+        
+        // ===============================================
+        // FUNGSI EXPORT WHATSAPP
+        // ===============================================
+
+        function formatReportsForWhatsApp(reports) {
+            const separator = '%0A---------------------------------------%0A';
+            let text = `*Laporan PM FMS - ${new Date().toLocaleDateString('id-ID')}*%0A`;
+            text += separator;
+
+            reports.forEach(report => {
+                const formattedDate = new Date(report.tanggal).toLocaleDateString('id-ID');
+                const aksesorisText = report.aksesoris && report.aksesoris.length > 0 ? report.aksesoris.join(', ') : 'N/A';
+                const kapasitasBreaker = report.kapasitas_breaker ? report.kapasitas_breaker : 'N/A';
+                const noteTemuan = report.note_temuan ? report.note_temuan : 'Nihil';
+                
+                const photoCount = report.foto_data ? report.foto_data.length : 0;
+                const photoSummary = photoCount > 0 ? `${photoCount} Foto (Diunduh saat penyimpanan)` : '0 Foto';
+
+                text += `*Unit: ${report.no_urut} - ${report.nama_unit}*%0A`;
+                text += `  Tanggal: ${formattedDate} | PIC: ${report.pic}%0A`;
+                text += `  Status: ${report.status.replace('_', ' ')}%0A`;
+                text += `  Aksesoris Cek: ${aksesorisText}%0A`;
+                text += `  Data: Ampere (R/S/T): ${report.ampere} | Voltage: ${report.tegangan} | Suhu: ${report.suhu} | Pressure: ${report.tekanan} | Breaker: ${kapasitasBreaker}%0A`;
+                text += `  Temuan: ${noteTemuan}%0A`; 
+                text += `  Foto: ${photoSummary}%0A`; 
+                text += separator;
+            });
+
+            return text;
+        }
+
+        const exportButton = document.getElementById('export-button');
+        if (exportButton) {
+            exportButton.addEventListener('click', function() {
+                const reports = getReports();
+                if (reports.length === 0) {
+                    showToast("Tidak ada data untuk dikirim.", true);
+                    return;
+                }
+
+                const whatsappMessage = formatReportsForWhatsApp(reports);
+                const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMessage}`;
+                window.open(whatsappUrl, '_blank');
+                
+                showToast("Membuka WhatsApp... Pastikan Anda mengirimkan pesannya.");
+            });
+        }
+
+
+        // Event Listeners (Pengecekan null)
+        const deleteAllButton = document.getElementById('delete-all-button');
+        const deleteFilteredButton = document.getElementById('delete-filtered-button');
+        const searchInput = document.getElementById('search-input');
+        
+        if (deleteAllButton) deleteAllButton.addEventListener('click', () => showDeleteModal('all'));
+        if (deleteFilteredButton) deleteFilteredButton.addEventListener('click', () => showDeleteModal('filtered'));
+        if (searchInput) searchInput.addEventListener('input', filterReports);
+
+        // INISIALISASI
+        document.addEventListener('DOMContentLoaded', () => {
+            filterReports(); 
+            const tanggalInput = document.getElementById('tanggal');
+            // Set tanggal hari ini secara default
+            if (tanggalInput) tanggalInput.valueAsDate = new Date(); 
+            // Pastikan preview foto kosong saat load
+            renderPhotoPreview();
+
+            // PENTING: Panggil fungsi kustom validasi untuk mengubah pesan native
+            initializeCustomValidationMessages(); 
+        });
+        
+    </script>
+</body>
+</html>
